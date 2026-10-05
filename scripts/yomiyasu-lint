@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# インストール済み yomiyasu の yomiyasu_lint.py を解決して、引数をそのまま渡す。
+# 使い方: scripts/yomiyasu-lint response.md [--json] [--strict]
+#         pbpaste | scripts/yomiyasu-lint
+set -euo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"
+LINT="$(python3 "${HERE}/yomiyasu_lint_path.py")"
+exec python3 "${LINT}" "$@"

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "yomiyasu-chat",
+  "description": "Claude Code marketplace for yomiyasu-chat",
+  "owner": {
+    "name": "atimot"
+  },
+  "plugins": [
+    {
+      "name": "yomiyasu-chat",
+      "description": "Claude Codeの会話応答を、結論ファーストで読みやすい自然な日本語にするoutput style。Stop hookで採点し、/style-feedbackで育てる",
+      "version": "0.2.0",
+      "source": "./",
+      "category": "productivity",
+      "license": "MIT"
+    }
+  ]
+}
