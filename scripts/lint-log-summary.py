@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Stop hook が書いた lint-log.jsonl を集計する。
+"""Stop hookが書いたlint-log.jsonlを集計する。
 
 使い方:
-  scripts/lint-log-summary.py                     # 既定のログ（データ置き場の lint-log.jsonl）
+  scripts/lint-log-summary.py                     # 既定のログ（データ置き場のlint-log.jsonl）
   scripts/lint-log-summary.py --split 2026-10-12  # この日付（0時）の前後に分けて比べる。導入前の基準値との比較に使う
   scripts/lint-log-summary.py --log path.jsonl --top 15
 """

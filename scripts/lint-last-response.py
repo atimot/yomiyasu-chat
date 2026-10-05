@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""直近のClaude Codeセッションの最終応答を取り出して yomiyasu_lint にかける。
+"""直近のClaude Codeセッションの最終応答を取り出してyomiyasu_lintにかける。
 
-yomiyasu プラグインがインストールされていることが前提（scripts/yomiyasu_lint_path.py で解決）。
+yomiyasuプラグインがインストールされていることが前提（パスは scripts/yomiyasu_lint_path.py で解決する）。
 
 使い方:
   scripts/lint-last-response.py            # カレントディレクトリに対応するプロジェクトの最新セッション

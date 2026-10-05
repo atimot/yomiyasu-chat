@@ -1,7 +1,7 @@
 {
   "name": "yomiyasu-chat",
-  "description": "Claude Codeの会話応答を、結論ファーストで読みやすい自然な日本語にするoutput style。yomiyasuの文体原則を常時適用し、Stop hookで採点し、/style-feedbackで育てる。",
-  "version": "0.2.1",
+  "description": "Claude Codeの会話応答を、結論ファーストで読みやすい自然な日本語にするoutput style。yomiyasuの文体原則を常時適用し、Stop hookで採点し、/yomiyasu-chat:style-feedbackで育てる。",
+  "version": "0.2.2",
   "author": {
     "name": "atimot"
   },

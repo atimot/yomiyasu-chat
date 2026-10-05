@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
-"""Claude Code の Stop hook。最終応答を yomiyasu_lint と個人パターンで検査し、結果を通知する。
+"""Claude CodeのStop hook。最終応答をyomiyasu_lintと個人パターンで検査し、結果を通知する。
 
 環境変数:
   YOMIYASU_HOOK_MODE       warn (既定) | block | off
                            warn:  スコアと指摘を警告として表示するだけ
-                           block: スコアが閾値未満なら1回だけ書き直しを求める（2回目以降は warn と同じ）
-  YOMIYASU_HOOK_THRESHOLD  block の閾値（既定 90）
-  YOMIYASU_HOOK_MIN_LEN    この文字数未満の応答は検査しない（既定 200）
+                           block: スコアが閾値未満なら1回だけ書き直しを求める（2回目以降はwarnと同じ）
+  YOMIYASU_HOOK_THRESHOLD  blockの閾値（既定90）
+  YOMIYASU_HOOK_MIN_LEN    この文字数未満の応答は検査しない（既定200）
   YOMIYASU_HOOK_IGNORE     無視するルール名（カンマ区切り。例: unnatural_halfwidth_space）
-  YOMIYASU_HOOK_LOG        検査結果を追記する JSONL（既定 <データ置き場>/lint-log.jsonl、空文字で無効）
-  YOMIYASU_LINT            yomiyasu_lint.py のパスを直接指定（省略時はインストール済み yomiyasu から解決）
+  YOMIYASU_HOOK_LOG        検査結果を追記するJSONL（既定は<データ置き場>/lint-log.jsonl、空文字で無効）
+  YOMIYASU_LINT            yomiyasu_lint.pyのパスを直接指定（省略時はインストール済みのyomiyasuから解決）
 
-データ置き場は、プラグインとして入れた場合は CLAUDE_PLUGIN_DATA（~/.claude/plugins/data/<id>/）、
-それ以外は ~/.claude/yomiyasu-chat/。個人パターン patterns.tsv（正規表現<TAB>説明）もここに置くと、
-yomiyasu の指摘に重ねて検出する。
+データ置き場は、プラグインとして入れた場合はCLAUDE_PLUGIN_DATA（~/.claude/plugins/data/<id>/）、
+それ以外は ~/.claude/yomiyasu-chat/。個人パターンのpatterns.tsv（正規表現<TAB>説明）もここに置くと、
+yomiyasuの指摘に重ねて検出する。
 
-採点は yomiyasu_lint と同じ式（100 点から warn / error は 5 点、info は 2 点減点）を、
-無視ルールを除き個人パターンを足したうえで再計算する。
-yomiyasu が未インストール、または検査中に失敗した場合は何もせず終了する（フェイルオープン）。
+点数はyomiyasu_lintと同じ式（100点からwarn/errorは5点、infoは2点減点）で、
+無視ルールを除き個人パターンを足したうえで計算し直す。
+yomiyasuが未インストール、または検査中に失敗した場合は何もせず終了する（フェイルオープン）。
 """
 import json
 import os
@@ -51,7 +51,7 @@ def already_blocked(session_id: str, prompt_id: str) -> bool:
 
 
 def load_patterns(path: Path) -> list:
-    """patterns.tsv を読む。1 行 = 正規表現<TAB>説明。空行と # 始まりは無視。壊れた正規表現は飛ばす。"""
+    """patterns.tsvを読む。1行 = 正規表現<TAB>説明。空行と # 始まりは無視。コンパイルできない正規表現は飛ばす。"""
     out = []
     if not path.is_file():
         return out
@@ -168,7 +168,7 @@ def main() -> None:
         emit({
             "decision": "block",
             "reason": (f"{head}。閾値{threshold}未満のため、直前の応答を次の指摘に沿って書き直してください。"
-                       f"意味は変えず、文体だけを直します。\n{detail}"),
+                       f"意味は変えず、文体だけを直してください。\n{detail}"),
         })
         return
 

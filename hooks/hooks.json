@@ -1,5 +1,5 @@
 {
-  "description": "応答終了時に yomiyasu_lint で最終応答を検査し、スコアと指摘を通知する",
+  "description": "応答終了時にyomiyasu_lintで最終応答を検査し、スコアと指摘を通知する",
   "hooks": {
     "Stop": [
       {
@@ -8,7 +8,7 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/yomiyasu_stop_hook.py\"",
             "timeout": 30,
-            "statusMessage": "yomiyasu_lint で応答を検査中"
+            "statusMessage": "yomiyasu_lintで応答を検査中"
           }
         ]
       }

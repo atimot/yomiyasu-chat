@@ -2,13 +2,13 @@
 
 Claude Codeの会話応答を、結論ファーストで読みやすい自然な日本語にするoutput styleです。[nanaism/yomiyasu](https://github.com/nanaism/yomiyasu) の文体原則（主述の対応、擬人化と比喩動詞の排除、情報を足さない、太字と箇条書きの抑制など）を、推敲依頼時だけでなく毎回の応答に適用します。
 
-yomiyasu本体は「渡された文章を書き直すスキル」であり、Claude Code自身の会話出力には発火しません。このリポジトリはその隙間を埋めるためのもので、yomiyasuスキルと併用できます。
+yomiyasu本体は「渡された文章を書き直すスキル」であり、Claude Code自身の会話出力には適用されません。このリポジトリはその隙間を埋めるためのもので、yomiyasuスキルと併用できます。
 
 入っているものは4つです。
 
 | 部品 | 働き | 反映 |
 |---|---|---|
-| `output-styles/yomiyasu-chat.md` | 文体の原則。毎回の応答に効く | 編集後はClaude Codeの再起動 |
+| `output-styles/yomiyasu-chat.md` | 文体の原則。毎回の応答に適用される | 編集後はClaude Codeの再起動 |
 | `hooks/yomiyasu_stop_hook.py` | 応答が終わるたびに `yomiyasu_lint` と個人パターンで採点し、表示と記録をする | 即時 |
 | `skills/style-feedback` | `/yomiyasu-chat:style-feedback` で読みにくかった文を取り込み、個人パターンとルールを育てる | 即時 |
 | `scripts/` | 手動で採点する `yomiyasu-lint`、直近の応答を調べる `lint-last-response.py`、記録を集計する `lint-log-summary.py` | 即時 |
@@ -29,7 +29,7 @@ yomiyasu本体は「渡された文章を書き直すスキル」であり、Cla
 /plugin install yomiyasu-chat@yomiyasu-chat
 ```
 
-Stop hookとスキルは自動で有効です。output styleはプラグイン名付きの `yomiyasu-chat:yomiyasu-chat` として登録されるので、`/output-style yomiyasu-chat:yomiyasu-chat` で選ぶか、`~/.claude/settings.json` に次を書きます。値は大文字小文字を区別するので注意してください。
+Stop hookとスキルは自動で有効です。output styleはプラグイン名付きの `yomiyasu-chat:yomiyasu-chat` として登録されるので、`/output-style yomiyasu-chat:yomiyasu-chat` で選ぶか、`~/.claude/settings.json` に次を書きます。値の大文字小文字は区別されるので注意してください。
 
 ```json
 { "outputStyle": "yomiyasu-chat:yomiyasu-chat" }
@@ -94,11 +94,11 @@ scripts/lint-log-summary.py --split 2026-10-12   # 切り替えた日付の前�
 |---|---|---|
 | `<データ置き場>/cases.md` | 台帳。元の文、何が嫌か、書き直し、分類 | 記録のみ |
 | `<データ置き場>/patterns.tsv` | 特定の語や言い回しを正規表現で1行。Stop hookが `personal` ルールとして検出する | 次の応答から |
-| `~/.claude/rules/yomiyasu-chat.md` | 同じ型の事例が2件目になったときだけ、NG → OKを1行。ユーザー rulesとして全プロジェクトに効く | 次のセッション（`/clear` 後） |
+| `~/.claude/rules/yomiyasu-chat.md` | 同じ型の事例が2件目になったときだけ、NG → OKを1行。ユーザー単位のrulesとして全プロジェクトに反映される | 次のセッション（`/clear` 後） |
 
-初回の事例をすぐルール化しないのは、ルールを太らせないためです。原則そのもの（結論の位置、箇条書きの使い方など）を変えたいときは、スキルがOutput Styleへの追記案を示し、ファイルは変えません。Output Styleはプラグインの更新で上書きされるので、リポジトリ側で直して再起動します。1回の変更は1ルールに絞り、同じ質問で前後を比べてください。
+初回の事例をすぐルール化しないのは、ルールを増やしすぎないためです。原則そのもの（結論の位置、箇条書きの使い方など）を変えたいときは、スキルがoutput styleへの追記案を示し、ファイルは変えません。output styleはプラグインの更新で上書きされるので、リポジトリ側で直して再起動します。1回の変更は1ルールに絞り、同じ質問で前後を比べてください。
 
-月に1回、記録を集計して多い指摘を見直し、`/doctor prompt-audit` でOutput Styleとルールの矛盾を検査します。点数は目安にとどめてください。yomiyasuの作者自身が、指標の最適化は不自然さを生むと書いています。
+月に1回、記録を集計して多い指摘を見直し、`/doctor prompt-audit` でoutput styleとルールの矛盾を検査します。点数は目安にとどめてください。yomiyasuの作者自身が、指標の最適化は不自然さを生むと書いています。
 
 ```bash
 scripts/lint-log-summary.py            # 件数、平均点、指摘なしの割合、多いルール
@@ -106,7 +106,7 @@ scripts/lint-log-summary.py            # 件数、平均点、指摘なしの割
 
 ## Stop hook
 
-応答が終わるたびに最終応答を `yomiyasu_lint` に通し、個人パターンを重ねて採点します。yomiyasuが未インストールのとき、応答が200字未満のとき、日本語を含まないとき、検査に失敗したときは何もしません。採点はyomiyasuと同じ式（100点からwarn/errorは5点、infoは2点減点）を、無視ルールを除いて再計算します。
+応答が終わるたびに最終応答を `yomiyasu_lint` に通し、個人パターンを重ねて採点します。yomiyasuが未インストールのとき、応答が200字未満のとき、日本語を含まないとき、検査に失敗したときは何もしません。点数は、yomiyasuと同じ式（100点からwarn/errorは5点、infoは2点減点）で、無視ルールを除いて計算し直します。
 
 動作は環境変数で変えられます。
 
@@ -121,7 +121,7 @@ scripts/lint-log-summary.py            # 件数、平均点、指摘なしの割
 
 `block` は同じプロンプトに対して1回しか発動しないので、書き直しが延々と続くことはありません。まずは `warn` で指摘の傾向を見て、スタイルやパターンに反映するほうが、毎回の遅延とトークン消費を増やさずに済みます。
 
-yomiyasuを入れない運用にしたいときは、`yomiyasu_lint.py`（MIT）のコピーをデータ置き場に置くとhookはそれを使います。コピーは自動では更新されません。
+yomiyasuを入れない運用にしたいときは、`yomiyasu_lint.py`（MIT）のコピーをデータ置き場に置きます。hookはそのコピーを使いますが、コピーは自動では更新されません。
 
 ## スクリプト
 
@@ -139,6 +139,7 @@ scripts/lint-log-summary.py --split 2026-10-12
 
 ## 変更履歴
 
+- 0.2.2: 文面をyomiyasuの文体ルールにそろえた。禁止語「効く」「壊れる」の置き換え、SKILL.mdとスクリプトの和欧文間の空白の除去、「output style」の表記統一、plugin.jsonのスキル名を `/yomiyasu-chat:style-feedback` に修正
 - 0.2.1: プラグインとして入れたときのoutput style名（`yomiyasu-chat:yomiyasu-chat`）をREADMEに明記
 - 0.2.0: `/yomiyasu-chat:style-feedback` スキル、個人パターン `patterns.tsv`、無視ルール `YOMIYASU_HOOK_IGNORE`、記録の集計 `lint-log-summary.py` を追加。記録と個人パターンの置き場をプラグインのデータ置き場に移した。`yomiyasu_lint.py` のコピーをデータ置き場に置けばyomiyasu無しでも採点できるようにした
 - 0.1.0: output styleとStop hookの初版
