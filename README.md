@@ -139,7 +139,7 @@ scripts/lint-log-summary.py --split 2026-10-12
 
 ## 変更履歴
 
-- 0.2.1: プラグインとして入れたときの output style 名（`yomiyasu-chat:yomiyasu-chat`）を README に明記
+- 0.2.1: プラグインとして入れたときのoutput style名（`yomiyasu-chat:yomiyasu-chat`）をREADMEに明記
 - 0.2.0: `/yomiyasu-chat:style-feedback` スキル、個人パターン `patterns.tsv`、無視ルール `YOMIYASU_HOOK_IGNORE`、記録の集計 `lint-log-summary.py` を追加。記録と個人パターンの置き場をプラグインのデータ置き場に移した。`yomiyasu_lint.py` のコピーをデータ置き場に置けばyomiyasu無しでも採点できるようにした
 - 0.1.0: output styleとStop hookの初版
 
