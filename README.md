@@ -29,10 +29,10 @@ yomiyasu本体は「渡された文章を書き直すスキル」であり、Cla
 /plugin install yomiyasu-chat@yomiyasu-chat
 ```
 
-Stop hookとスキルは自動で有効です。output styleは `/output-style yomiyasu-chat` で選ぶか、`~/.claude/settings.json` に次を書きます。値は大文字小文字を区別するので注意してください。
+Stop hookとスキルは自動で有効です。output styleはプラグイン名付きの `yomiyasu-chat:yomiyasu-chat` として登録されるので、`/output-style yomiyasu-chat:yomiyasu-chat` で選ぶか、`~/.claude/settings.json` に次を書きます。値は大文字小文字を区別するので注意してください。
 
 ```json
-{ "outputStyle": "yomiyasu-chat" }
+{ "outputStyle": "yomiyasu-chat:yomiyasu-chat" }
 ```
 
 プラグインの記録と個人パターンは `~/.claude/plugins/data/yomiyasu-chat-yomiyasu-chat/` に置かれ、プラグインを更新しても残ります。
@@ -73,7 +73,7 @@ ln -s ~/work/yomiyasu-chat/output-styles/yomiyasu-chat.md ~/.claude/output-style
 
 1. yomiyasuプラグインを入れる
 2. このプラグインを入れる。output styleは `Default` のまま数日使う。Stop hookが素の応答の点数を記録する
-3. `/output-style yomiyasu-chat` に切り替える
+3. `/output-style yomiyasu-chat:yomiyasu-chat` に切り替える（シンボリックリンク運用なら `yomiyasu-chat`）
 4. 1週間後に前後を比べる
 
 ```bash
@@ -139,6 +139,7 @@ scripts/lint-log-summary.py --split 2026-10-12
 
 ## 変更履歴
 
+- 0.2.1: プラグインとして入れたときの output style 名（`yomiyasu-chat:yomiyasu-chat`）を README に明記
 - 0.2.0: `/yomiyasu-chat:style-feedback` スキル、個人パターン `patterns.tsv`、無視ルール `YOMIYASU_HOOK_IGNORE`、記録の集計 `lint-log-summary.py` を追加。記録と個人パターンの置き場をプラグインのデータ置き場に移した。`yomiyasu_lint.py` のコピーをデータ置き場に置けばyomiyasu無しでも採点できるようにした
 - 0.1.0: output styleとStop hookの初版
 
