@@ -7,7 +7,7 @@
                            block: スコアが閾値未満なら1回だけ書き直しを求める（2回目以降はwarnと同じ）
   YOMIYASU_HOOK_THRESHOLD  blockの閾値（既定90）
   YOMIYASU_HOOK_MIN_LEN    この文字数未満の応答は検査しない（既定200）
-  YOMIYASU_HOOK_IGNORE     無視するルール名（カンマ区切り。例: unnatural_halfwidth_space）
+  YOMIYASU_HOOK_IGNORE     無視するルール名（カンマ区切り。例: sentence_end_repetition）
   YOMIYASU_HOOK_LOG        検査結果を追記するJSONL（既定は<データ置き場>/lint-log.jsonl、空文字で無効）
   YOMIYASU_LINT            yomiyasu_lint.pyのパスを直接指定（省略時はインストール済みのyomiyasuから解決）
 
@@ -17,6 +17,8 @@ yomiyasuの指摘に重ねて検出する。
 
 点数はyomiyasu_lintと同じ式（100点からwarn/errorは5点、infoは2点減点）で、
 無視ルールを除き個人パターンを足したうえで計算し直す。
+記録には使ったyomiyasuのバージョン（lint_version）も残す。yomiyasuの更新で検査ルールが変わると
+同じ文章でも点が変わるので、集計はバージョンごとに分けて見る（lint-log-summary.py --by-version）。
 yomiyasuが未インストール、または検査中に失敗した場合は何もせず終了する（フェイルオープン）。
 """
 import json
@@ -30,7 +32,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "scripts"))
-from yomiyasu_lint_path import data_dir, resolve  # noqa: E402
+from yomiyasu_lint_path import data_dir, lint_version, resolve  # noqa: E402
 
 MARKER = re.compile(r"^\s*\[yomiyasu\]\s*$", re.M)
 JAPANESE = re.compile(r"[぀-ヿ一-鿿]")
@@ -107,7 +109,8 @@ def summarize(findings: list, limit: int = 3) -> str:
     return "\n".join(lines)
 
 
-def append_log(log_path: str, data: dict, text: str, score: int, findings: list) -> None:
+def append_log(log_path: str, data: dict, text: str, score: int, findings: list,
+               version: str) -> None:
     if not log_path:
         return
     try:
@@ -121,6 +124,7 @@ def append_log(log_path: str, data: dict, text: str, score: int, findings: list)
                 "chars": len(text),
                 "score": score,
                 "rules": [f.get("rule") for f in findings],
+                "lint_version": version,
             }, ensure_ascii=False) + "\n")
     except OSError:
         pass
@@ -153,7 +157,7 @@ def main() -> None:
     findings += personal_findings(text, load_patterns(ddir / "patterns.tsv"))
     score = rescore(findings)
 
-    append_log(log_path, data, text, score, findings)
+    append_log(log_path, data, text, score, findings, lint_version(lint))
 
     if not findings:
         return

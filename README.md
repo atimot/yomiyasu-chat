@@ -80,6 +80,8 @@ ln -s ~/work/yomiyasu-chat/output-styles/yomiyasu-chat.md ~/.claude/output-style
 scripts/lint-log-summary.py --split 2026-10-12   # 切り替えた日付の前後で件数・平均点・多い指摘を比べる
 ```
 
+記録にはyomiyasuのバージョンも残ります。yomiyasuが更新されて検査ルールが変わると同じ文章でも点が変わるので、バージョンをまたいだ点数は比べず、`--by-version` でバージョンごとに分けて見てください。
+
 ## 改善の進め方
 
 読みにくい応答を見つけたら、その場で取り込んでください。
@@ -115,13 +117,13 @@ scripts/lint-log-summary.py            # 件数、平均点、指摘なしの割
 | `YOMIYASU_HOOK_MODE` | `warn` | `warn` は警告表示のみ。`block` はスコアが閾値未満のとき1回だけ書き直しを求める。`off` で無効 |
 | `YOMIYASU_HOOK_THRESHOLD` | `90` | `block` の閾値 |
 | `YOMIYASU_HOOK_MIN_LEN` | `200` | この文字数未満の応答は検査しない |
-| `YOMIYASU_HOOK_IGNORE` | 無し | 無視するルール名（カンマ区切り）。例: `unnatural_halfwidth_space` |
-| `YOMIYASU_HOOK_LOG` | `<データ置き場>/lint-log.jsonl` | 検査結果の追記先。空文字で無効 |
+| `YOMIYASU_HOOK_IGNORE` | 無し | 無視するルール名（カンマ区切り）。例: `sentence_end_repetition` |
+| `YOMIYASU_HOOK_LOG` | `<データ置き場>/lint-log.jsonl` | 検査結果（点数、ルール名、yomiyasuのバージョン）の追記先。空文字で無効 |
 | `YOMIYASU_LINT` | 無し | `yomiyasu_lint.py` のパスを直接指定 |
 
 `block` は同じプロンプトに対して1回しか発動しないので、書き直しが延々と続くことはありません。まずは `warn` で指摘の傾向を見て、スタイルやパターンに反映するほうが、毎回の遅延とトークン消費を増やさずに済みます。
 
-yomiyasuを入れない運用にしたいときは、`yomiyasu_lint.py`（MIT）のコピーをデータ置き場に置きます。hookはそのコピーを使いますが、コピーは自動では更新されません。
+yomiyasuを入れない運用にしたいときは、`yomiyasu_lint.py` と `markdown_visibility.py`（どちらもMIT）の2ファイルをデータ置き場に置きます。`yomiyasu_lint.py` は同じディレクトリの `markdown_visibility.py` を読み込むので、1ファイルだけでは動きません。hookはこのコピーを使いますが、コピーは自動では更新されません。
 
 ## スクリプト
 
@@ -131,14 +133,16 @@ pbpaste | scripts/yomiyasu-lint              # クリップボードを検査
 scripts/lint-last-response.py                # 直近のClaude Codeセッションの最終応答を検査（対象プロジェクトのディレクトリで実行）
 scripts/lint-last-response.py -n 3 --cwd ~/work/some-project
 scripts/lint-log-summary.py --split 2026-10-12
+scripts/lint-log-summary.py --by-version     # yomiyasuのバージョンごとに分けて集計
 ```
 
-`yomiyasu_lint.py` の探索先は、環境変数 `YOMIYASU_LINT`、`~/.claude/plugins/installed_plugins.json` の記録、プラグインキャッシュの最新バージョン、`npx skills` の配置先、データ置き場のコピーの順です。
+`yomiyasu_lint.py` の探索先は、環境変数 `YOMIYASU_LINT`、`~/.claude/plugins/installed_plugins.json` の記録、プラグインキャッシュの最新バージョン、`npx skills` の配置先、データ置き場のコピー（2ファイルそろっているとき）の順です。
 
 ルールが増えて回帰が気になり始めたら、`evals/` にケースを置いて `claude plugin eval .` でスタイルあり・なしのスコア差を測ります。
 
 ## 変更履歴
 
+- 0.2.3: yomiyasu 1.0.8に追従。廃止されたルール `unnatural_halfwidth_space` の例を差し替え、output styleから和欧文間の半角空白の行を外した（yomiyasuが空白の有無を一律には扱わない方針に変わったため）。`yomiyasu_lint.py` のコピー運用を `markdown_visibility.py` との2ファイルに変更。記録にyomiyasuのバージョンを残し、`lint-log-summary.py --by-version` で分けて集計できるようにした。output styleに変更報告の書き方と専門用語の扱いを追加
 - 0.2.2: 文面をyomiyasuの文体ルールにそろえた。禁止語「効く」「壊れる」の置き換え、SKILL.mdとスクリプトの和欧文間の空白の除去、「output style」の表記統一、plugin.jsonのスキル名を `/yomiyasu-chat:style-feedback` に修正
 - 0.2.1: プラグインとして入れたときのoutput style名（`yomiyasu-chat:yomiyasu-chat`）をREADMEに明記
 - 0.2.0: `/yomiyasu-chat:style-feedback` スキル、個人パターン `patterns.tsv`、無視ルール `YOMIYASU_HOOK_IGNORE`、記録の集計 `lint-log-summary.py` を追加。記録と個人パターンの置き場をプラグインのデータ置き場に移した。`yomiyasu_lint.py` のコピーをデータ置き場に置けばyomiyasu無しでも採点できるようにした

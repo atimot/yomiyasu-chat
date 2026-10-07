@@ -6,12 +6,18 @@
   2. ~/.claude/plugins/installed_plugins.json のyomiyasuのinstallPath
   3. ~/.claude/plugins/cache/yomiyasu/yomiyasu/<version>/ のうち最新バージョン
   4. npx skills / openskillsでの配置先（~/.claude/skills, ~/.agents/skills）
-  5. データ置き場に置いたコピー（<data_dir>/yomiyasu_lint.py。yomiyasuを入れない運用向け）
+  5. データ置き場に置いたコピー（<data_dir>/yomiyasu_lint.py と markdown_visibility.py の2ファイル。
+     yomiyasuを入れない運用向け。yomiyasu 1.0.8以降のyomiyasu_lint.pyは同じディレクトリの
+     markdown_visibility.pyを読み込むので、1ファイルだけでは動かない）
 見つからなければ終了コード3で、インストール方法を案内する。
+
+lint_version(path) は、そのyomiyasu_lint.pyが属するyomiyasuのバージョンを返す
+（.claude-plugin/plugin.json のversion。無ければファイル内容のsha1先頭8桁）。Stop hookが記録に残す。
 
 データ置き場（data_dir()）は、プラグインとして動いているときはCLAUDE_PLUGIN_DATA
 （~/.claude/plugins/data/<id>/。プラグイン更新後も残る）、それ以外は ~/.claude/yomiyasu-chat/。
 """
+import hashlib
 import json
 import os
 import re
@@ -23,7 +29,8 @@ INSTALL_HINT = (
     "  /plugin marketplace add nanaism/yomiyasu\n"
     "  /plugin install yomiyasu@yomiyasu\n"
     "別の場所にある場合は環境変数YOMIYASU_LINTでパスを指定できます。\n"
-    "yomiyasuを入れない場合は、データ置き場にyomiyasu_lint.pyのコピー（MIT）を置いても動きます。"
+    "yomiyasuを入れない場合は、データ置き場にyomiyasu_lint.pyとmarkdown_visibility.pyのコピー（MIT）を\n"
+    "2ファイルそろえて置いても動きます。"
 )
 
 
@@ -69,9 +76,26 @@ def resolve() -> Path | None:
             return base / rel
 
     vendored = data_dir() / "yomiyasu_lint.py"
-    if vendored.is_file():
+    if vendored.is_file() and (vendored.parent / "markdown_visibility.py").is_file():
         return vendored
     return None
+
+
+def lint_version(lint: Path) -> str:
+    """yomiyasu_lint.pyが属するyomiyasuのバージョン。plugin.jsonが無ければ内容のsha1先頭8桁。"""
+    for base in (lint.parent.parent, lint.parent):
+        manifest = base / ".claude-plugin" / "plugin.json"
+        if manifest.is_file():
+            try:
+                v = json.loads(manifest.read_text(encoding="utf-8")).get("version")
+                if v:
+                    return str(v)
+            except (json.JSONDecodeError, OSError):
+                pass
+    try:
+        return "sha1:" + hashlib.sha1(lint.read_bytes()).hexdigest()[:8]
+    except OSError:
+        return "unknown"
 
 
 if __name__ == "__main__":
