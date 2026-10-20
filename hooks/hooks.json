@@ -1,5 +1,5 @@
 {
-  "description": "応答終了時にyomiyasu_lintで最終応答を検査し、スコアと指摘を通知する",
+  "description": "応答終了時にyomiyasu_lintで最終応答を検査し、見直し候補と目安の点数を通知する",
   "hooks": {
     "Stop": [
       {

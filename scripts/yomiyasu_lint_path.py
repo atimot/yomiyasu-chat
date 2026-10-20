@@ -8,11 +8,12 @@
   4. npx skills / openskillsでの配置先（~/.claude/skills, ~/.agents/skills）
   5. データ置き場に置いたコピー（<data_dir>/yomiyasu_lint.py と markdown_visibility.py の2ファイル。
      yomiyasuを入れない運用向け。yomiyasu 1.0.8以降のyomiyasu_lint.pyは同じディレクトリの
-     markdown_visibility.pyを読み込むので、1ファイルだけでは動かない）
+     markdown_visibility.pyを読み込むので、1ファイルだけでは動かない。2.1.0でもこの2ファイルで動く）
 見つからなければ終了コード3で、インストール方法を案内する。
 
 lint_version(path) は、そのyomiyasu_lint.pyが属するyomiyasuのバージョンを返す
-（.claude-plugin/plugin.json のversion。無ければファイル内容のsha1先頭8桁）。Stop hookが記録に残す。
+（2.0.0以降はファイル内の __version__、1.xは .claude-plugin/plugin.json のversion、どちらも無ければ
+ファイル内容のsha1先頭8桁）。Stop hookが記録に残す。
 
 データ置き場（data_dir()）は、プラグインとして動いているときはCLAUDE_PLUGIN_DATA
 （~/.claude/plugins/data/<id>/。プラグイン更新後も残る）、それ以外は ~/.claude/yomiyasu-chat/。
@@ -82,7 +83,17 @@ def resolve() -> Path | None:
 
 
 def lint_version(lint: Path) -> str:
-    """yomiyasu_lint.pyが属するyomiyasuのバージョン。plugin.jsonが無ければ内容のsha1先頭8桁。"""
+    """yomiyasu_lint.pyが属するyomiyasuのバージョン。
+
+    yomiyasu 2.0.0以降のyomiyasu_lint.pyは先頭近くに __version__ = "x.y.z" を持つのでそれを読む。
+    無ければ（1.x）.claude-plugin/plugin.json のversion、それも無ければ内容のsha1先頭8桁。"""
+    try:
+        head = lint.read_text(encoding="utf-8", errors="replace")[:4000]
+    except OSError:
+        return "unknown"
+    m = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', head, re.M)
+    if m:
+        return m.group(1)
     for base in (lint.parent.parent, lint.parent):
         manifest = base / ".claude-plugin" / "plugin.json"
         if manifest.is_file():

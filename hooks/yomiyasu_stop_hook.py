@@ -15,11 +15,16 @@
 それ以外は ~/.claude/yomiyasu-chat/。個人パターンのpatterns.tsv（正規表現<TAB>説明）もここに置くと、
 yomiyasuの指摘に重ねて検出する。
 
-点数はyomiyasu_lintと同じ式（100点からwarn/errorは5点、infoは2点減点）で、
-無視ルールを除き個人パターンを足したうえで計算し直す。
-記録には使ったyomiyasuのバージョン（lint_version）も残す。yomiyasuの更新で検査ルールが変わると
-同じ文章でも点が変わるので、集計はバージョンごとに分けて見る（lint-log-summary.py --by-version）。
-yomiyasuが未インストール、または検査中に失敗した場合は何もせず終了する（フェイルオープン）。
+目安の点数は、yomiyasu 2.0.0以降の rule_penalty_score と同じ式で出す（候補の重み error 3、warn 2、
+info 1 を地の文1,000字あたりに直した x から 100×40÷(40+x) を丸める。excess_bold と excess_list は文書単位で
+2、bold_label_list は1）。無視ルールも個人パターンもなければ yomiyasu の値をそのまま使い、あるときは同じ式で
+計算し直す（計算し直すときの字数は metrics.char_count で、見出しの字数を含む分だけ yomiyasu の値と数点ずれる
+ことがある）。yomiyasu 1.x（format_version 1）の出力には、当時の式（100点からwarn/errorは5点、infoは2点減点）を
+使う。yomiyasu 自身はこの値を合否に使わない目安としていて、通常の出力にも出さない。
+記録には使ったyomiyasuのバージョン（lint_version）と format_version も残す。yomiyasuの更新で検査ルールや式が
+変わると同じ文章でも点が変わるので、集計はバージョンごとに分けて見る（lint-log-summary.py --by-version）。
+yomiyasuが未インストール、または検査中に失敗した場合（2.0.0以降の内部の誤りは終了コード3）は何もせず終了する
+（フェイルオープン）。
 """
 import json
 import os
@@ -91,9 +96,34 @@ def personal_findings(text: str, patterns: list) -> list:
     return out
 
 
-def rescore(findings: list) -> int:
-    penalty = sum(5 if f.get("severity") in ("warn", "error") else 2 for f in findings)
-    return max(0, 100 - penalty)
+# yomiyasu 2.0.0以降の rule_penalty_score の定数（scripts/yomiyasu_lint.py の _PENALTY_* と同じ値）
+PENALTY_WEIGHTS = {"error": 3, "warn": 2, "info": 1}
+DOCUMENT_RULE_WEIGHTS = {"excess_bold": 2, "excess_list": 2, "bold_label_list": 1}
+SUMMARY_RULES = {"negative_parallelism_density"}
+PENALTY_FLOOR = 1000
+PENALTY_HALF = 40
+
+
+def rescore(result: dict, findings: list, changed: bool) -> int:
+    """目安の点数。yomiyasuの出力をそのまま使えるときは使い、候補を増減したときは同じ式で計算し直す。"""
+    if result.get("format_version", 1) < 2:
+        penalty = sum(5 if f.get("severity") in ("warn", "error") else 2 for f in findings)
+        return max(0, 100 - penalty)
+    if not changed and isinstance(result.get("rule_penalty_score"), int):
+        return result["rule_penalty_score"]
+    if not findings:
+        return 100
+    line_weight = document_weight = 0
+    for f in findings:
+        rule = f.get("rule")
+        if rule in DOCUMENT_RULE_WEIGHTS:
+            document_weight += DOCUMENT_RULE_WEIGHTS[rule]
+        elif rule not in SUMMARY_RULES:
+            line_weight += PENALTY_WEIGHTS.get(f.get("severity"), PENALTY_WEIGHTS["warn"])
+    m = max(int((result.get("metrics") or {}).get("char_count") or 0), PENALTY_FLOOR)
+    num = 100 * PENALTY_HALF * m
+    den = (PENALTY_HALF + document_weight) * m + 1000 * line_weight
+    return max(1, min(99, (2 * num + den) // (2 * den)))
 
 
 def summarize(findings: list, limit: int = 3) -> str:
@@ -110,7 +140,7 @@ def summarize(findings: list, limit: int = 3) -> str:
 
 
 def append_log(log_path: str, data: dict, text: str, score: int, findings: list,
-               version: str) -> None:
+               version: str, format_version: int) -> None:
     if not log_path:
         return
     try:
@@ -125,6 +155,7 @@ def append_log(log_path: str, data: dict, text: str, score: int, findings: list,
                 "score": score,
                 "rules": [f.get("rule") for f in findings],
                 "lint_version": version,
+                "format_version": format_version,
             }, ensure_ascii=False) + "\n")
     except OSError:
         pass
@@ -153,16 +184,19 @@ def main() -> None:
     if r.returncode not in (0, 1) or not r.stdout.strip():
         return
     result = json.loads(r.stdout)
-    findings = [f for f in result.get("findings", []) if f.get("rule") not in ignore]
-    findings += personal_findings(text, load_patterns(ddir / "patterns.tsv"))
-    score = rescore(findings)
+    original = result.get("findings", [])
+    findings = [f for f in original if f.get("rule") not in ignore]
+    personal = personal_findings(text, load_patterns(ddir / "patterns.tsv"))
+    findings += personal
+    score = rescore(result, findings, changed=bool(personal) or len(findings) != len(original))
 
-    append_log(log_path, data, text, score, findings, lint_version(lint))
+    append_log(log_path, data, text, score, findings, lint_version(lint),
+               int(result.get("format_version", 1)))
 
     if not findings:
         return
 
-    head = f"yomiyasu_lint: {score}/100（{len(findings)}件）"
+    head = f"yomiyasu_lint: 見直し候補{len(findings)}件（目安{score}）"
 
     if mode == "block" and score < threshold and not already_blocked(
             str(data.get("session_id")), str(data.get("prompt_id"))):
@@ -171,7 +205,7 @@ def main() -> None:
             for f in findings)
         emit({
             "decision": "block",
-            "reason": (f"{head}。閾値{threshold}未満のため、直前の応答を次の指摘に沿って書き直してください。"
+            "reason": (f"{head}。目安が閾値{threshold}未満のため、直前の応答を次の候補に沿って書き直してください。"
                        f"意味は変えず、文体だけを直してください。\n{detail}"),
         })
         return

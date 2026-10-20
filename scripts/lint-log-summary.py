@@ -7,8 +7,10 @@
   scripts/lint-log-summary.py --by-version        # yomiyasuのバージョンごとに分けて集計する
   scripts/lint-log-summary.py --log path.jsonl --top 15
 
-yomiyasuの更新で検査ルールが変わると同じ文章でも点が変わるので、バージョンをまたいだ点数は比べない。
+yomiyasuの更新で検査ルールや点数の式が変わると同じ文章でも点が変わるので、バージョンをまたいだ点数は比べない。
 各行のlint_version（0.2.3以降のStop hookが記録する）で分ける。無い行は「不明」にまとめる。
+点数は、yomiyasu 2.0.0以降は rule_penalty_score と同じ式の目安（format_version 2）、1.xは当時の式（format_version 1。
+0.2.3以前のhookは2.xの出力にもこの式を使っていた）で、format_versionの無い行は1.xの式とみなす。
 """
 import argparse
 import json
@@ -39,7 +41,10 @@ def report(label: str, rows: list, top: int) -> None:
         return
     scores = [r.get("score", 0) for r in rows]
     clean = sum(1 for r in rows if not r.get("rules"))
-    print(f"  平均 {statistics.mean(scores):.1f} 点 / 中央値 {statistics.median(scores):.0f} 点 / 指摘なし {clean} 件 ({clean / len(rows):.0%})")
+    print(f"  目安の平均 {statistics.mean(scores):.1f} / 中央値 {statistics.median(scores):.0f} / 候補なし {clean} 件 ({clean / len(rows):.0%})")
+    formats = Counter(int(r.get("format_version") or 1) for r in rows)
+    if len(formats) > 1:
+        print("  点数の式が混在: " + " / ".join(f"format_version {v} ×{n}" for v, n in sorted(formats.items())))
     versions = Counter(version_of(r) for r in rows)
     if len(versions) > 1 or "不明" not in versions:
         print("  yomiyasu: " + " / ".join(f"{v} ×{n}" for v, n in versions.most_common()))
